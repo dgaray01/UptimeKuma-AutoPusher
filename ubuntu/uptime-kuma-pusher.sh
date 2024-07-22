@@ -1,37 +1,75 @@
 #!/bin/bash
 
-# Print a welcome message
-echo "Uptime-Kuma Auto push"
-echo "Thank you for using this script."
+# Function to generate a random 5-digit pin code
+generate_pin() {
+    echo $((RANDOM % 90000 + 10000))
+}
+
+# Print the welcome message
+echo "###############################################"
+echo "#                                             #"
+echo "#      Uptime-Kuma Auto Push Script           #"
+echo "#                                             #"
+echo "###############################################"
+echo
+echo "Thank you for using this script!"
+echo
 
 # Ask for the Push URL
-read -p "Enter the Push URL: " URL
+read -p "Please enter the Push URL: " PUSH_URL
 
-# Generate a random 5-digit PIN
-PIN=$((10000 + RANDOM % 90000))
-
-# Create the folder at /etc/uptimekumapush
-mkdir -p /etc/uptimekumapush
-
-# Verify if a file with the PIN exists
-while [[ -e "/etc/uptimekumapush/$PIN.sh" ]]; do
-    PIN=$((10000 + RANDOM % 90000))
+# Ask for the Heartbeat interval and validate input
+while true; do
+    read -p "Please enter the Heartbeat interval in minutes (must be more than 1 minute): " HEARTBEAT_INTERVAL
+    if [[ $HEARTBEAT_INTERVAL =~ ^[0-9]+$ ]] && [ $HEARTBEAT_INTERVAL -gt 1 ]; then
+        break
+    else
+        echo "Invalid input. Please enter a digit greater than 1."
+    fi
 done
 
-# Create the file with the PIN and extension .sh
-echo "#!/bin/bash" > "/etc/uptimekumapush/$PIN.sh"
-echo "" >> "/etc/uptimekumapush/$PIN.sh"
-echo "# URL for the Passive Monitor Push" >> "/etc/uptimekumapush/$PIN.sh"
-echo "URL=\"$URL\"" >> "/etc/uptimekumapush/$PIN.sh"
-echo "" >> "/etc/uptimekumapush/$PIN.sh"
-echo "# Send the Passive Monitor Push using curl" >> "/etc/uptimekumapush/$PIN.sh"
-echo "curl -X GET \"\$URL\"" > "/etc/uptimekumapush/$PIN.sh"  # Error: overwrites the file instead of appending
+# Create the folder
+FOLDER_PATH="/etc/uptimekumapush"
+mkdir -p "$FOLDER_PATH"
 
-# Make the file executable
-chmod +x /etc/uptimekumapush/$PIN.sh  # Error: missing quotes around the file path
+# Generate a unique 5-digit pin code and verify it doesn't already exist
+while true; do
+    PIN_CODE=$(generate_pin)
+    FILE_PATH="$FOLDER_PATH/$PIN_CODE.sh"
+    if [ ! -f "$FILE_PATH" ]; then
+        break
+    fi
+done
 
-# Add the crontab entry
-(crontab -l ; echo "*/1 * * * * /etc/uptimekumapush/$PIN.sh") | crontab -  # Error: missing quotes around the crontab entry
+# Create the script file with the provided URL
+cat <<EOF > "$FILE_PATH"
+#!/bin/bash
 
-# Log setup completion
-echo "Setup finished correctly. PIN: $PIN" 
+# URL for the Passive Monitor Push
+URL="$PUSH_URL"
+
+# Send the Passive Monitor Push using curl
+curl -X GET "\$URL"
+EOF
+
+# Make the script executable
+chmod +x "$FILE_PATH"
+
+# Add a new cron job
+(crontab -l 2>/dev/null; echo "*/$HEARTBEAT_INTERVAL * * * * $FILE_PATH") | crontab -
+
+# Log everything
+LOG_PATH="/var/log/uptimekumapush.log"
+{
+    echo "Setup started on $(date)"
+    echo "Push URL: $PUSH_URL"
+    echo "Heartbeat Interval: $HEARTBEAT_INTERVAL minutes"
+    echo "Generated PIN Code: $PIN_CODE"
+    echo "Script file created at: $FILE_PATH"
+    echo "Cron job added: */$HEARTBEAT_INTERVAL * * * * $FILE_PATH"
+    echo "Setup finished on $(date)"
+} >> "$LOG_PATH"
+
+# Final message
+echo
+echo "Setup finished correctly. All actions have been logged to $LOG_PATH."
