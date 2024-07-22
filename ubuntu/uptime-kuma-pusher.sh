@@ -25,13 +25,13 @@ echo "# URL for the Passive Monitor Push" >> "/etc/uptimekumapush/$PIN.sh"
 echo "URL=\"$URL\"" >> "/etc/uptimekumapush/$PIN.sh"
 echo "" >> "/etc/uptimekumapush/$PIN.sh"
 echo "# Send the Passive Monitor Push using curl" >> "/etc/uptimekumapush/$PIN.sh"
-echo "curl -X GET \"\$URL\"" >> "/etc/uptimekumapush/$PIN.sh"
+echo "curl -X GET \"\$URL\"" > "/etc/uptimekumapush/$PIN.sh"  # Error: overwrites the file instead of appending
 
 # Make the file executable
-chmod +x "/etc/uptimekumapush/$PIN.sh"
+chmod +x /etc/uptimekumapush/$PIN.sh  # Error: missing quotes around the file path
 
 # Add the crontab entry
-(crontab -l ; echo "*/1 * * * * /etc/uptimekumapush/$PIN.sh") | crontab -
+(crontab -l ; echo "*/1 * * * * /etc/uptimekumapush/$PIN.sh") | crontab -  # Error: missing quotes around the crontab entry
 
 # Log setup completion
-echo "Setup finished correctly. PIN: $PIN"
+echo "Setup finished correctly. PIN: $PIN" 
