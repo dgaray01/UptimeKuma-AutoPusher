@@ -16,15 +16,31 @@ echo "Thank you for using this script!"
 echo
 
 # Ask for the Push URL
-read -p "Please enter the Push URL: " PUSH_URL
+while true; do
+    read -p "Please enter the Push URL: " PUSH_URL
+    if [[ -n "$PUSH_URL" ]]; then
+        break
+    else
+        echo "The Push URL cannot be empty. Please enter a valid URL."
+    fi
+done
 
 # Ask for the Heartbeat interval and validate input
 while true; do
     read -p "Please enter the Heartbeat interval in minutes (must be more than 1 minute): " HEARTBEAT_INTERVAL
-    if [[ $HEARTBEAT_INTERVAL =~ ^[0-9]+$ ]] && [ $HEARTBEAT_INTERVAL -gt 1 ]; then
+    if [[ "$HEARTBEAT_INTERVAL" =~ ^[0-9]+$ ]] && [ "$HEARTBEAT_INTERVAL" -ge 1 ]; then
         break
     else
         echo "Invalid input. Please enter a digit greater than 1."
+    fi
+done
+
+# Generate a unique 5-digit pin code and ensure response
+PIN_CODE=""
+while true; do
+    PIN_CODE=$(generate_pin)
+    if [[ -n "$PIN_CODE" ]]; then
+        break
     fi
 done
 
@@ -32,13 +48,13 @@ done
 FOLDER_PATH="/etc/uptimekumapush"
 mkdir -p "$FOLDER_PATH"
 
-# Generate a unique 5-digit pin code and verify it doesn't already exist
+# Ensure the PIN code is unique
 while true; do
-    PIN_CODE=$(generate_pin)
     FILE_PATH="$FOLDER_PATH/$PIN_CODE.sh"
     if [ ! -f "$FILE_PATH" ]; then
         break
     fi
+    PIN_CODE=$(generate_pin)
 done
 
 # Create the script file with the provided URL
